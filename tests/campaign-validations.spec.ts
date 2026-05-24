@@ -5,7 +5,6 @@ import {
   fillCampaignName,
   fillDescription,
   fillInitialMessage,
-  expectCharacterCounter,
 } from './helpers';
 
 // Testes de validação de limites de campos
@@ -106,9 +105,6 @@ test.describe('Validações de Limites de Campo', () => {
     await fillDescription(page, desc500);
 
     // 500 caracteres é o máximo permitido para descrição
-    const descCounter = page.locator('[data-testid="description-counter"]');
-    const counterText = await descCounter.textContent();
-
     // Nota: BUG-04 causa problema aqui também
     // O contador reflete o tamanho do nome, não da descrição
   });
@@ -144,10 +140,8 @@ test.describe('Validações de Limites de Campo', () => {
     await fillDescription(page, 'a'.repeat(50));
 
     // Verifica contadores
-    const nameCounter = page.locator('[data-testid="name-counter"]');
     const descCounter = page.locator('[data-testid="description-counter"]');
 
-    const nameCountText = await nameCounter.textContent();
     const descCountText = await descCounter.textContent();
 
     // Esperado:
@@ -254,7 +248,6 @@ test.describe('Validações de Limites de Campo', () => {
     const descWithLineBreaks = 'Linha 1\nLinha 2\nLinha 3';
     await fillDescription(page, descWithLineBreaks);
 
-    const descCounter = page.locator('[data-testid="description-counter"]');
     // Nota: BUG-04 faz isso exibir o tamanho do nome, não da descrição
   });
 

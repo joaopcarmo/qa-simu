@@ -388,8 +388,9 @@ export async function fillCompleteValidForm(
     await selectChannels(page, data.channels);
   }
 
-  const startDate = data.startDate || (await setStartDateTomorrow(page));
   if (data.startDate) {
     await setStartDate(page, data.startDate);
+  } else {
+    await setStartDateTomorrow(page);
   }
 }
