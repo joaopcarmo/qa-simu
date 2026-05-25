@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
+import posthog from 'posthog-js';
 import './App.css';
 
 type Objective = 'sales' | 'retention' | 'reactivation' | '';
@@ -111,6 +112,13 @@ function App() {
 
   const handleSaveDraft = () => {
     console.log('Saved draft:', form);
+    posthog.capture('campaign_draft_saved', {
+      campaign_name: form.name,
+      objective: form.objective,
+      agent_id: form.agentId,
+      audience_source: form.audienceSource,
+      channels: form.channels,
+    });
     setFeedback({ status: 'draft', name: form.name });
     setTimeout(() => setFeedback(null), 800);
   };
@@ -118,11 +126,61 @@ function App() {
   const handleLaunch = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     console.log('Launching campaign:', form);
+
+    const selectedSegment = SEGMENTS.find(s => s.id === form.segmentId);
+    const estimatedAudienceSize = selectedSegment?.count || 0;
+    const estimatedMessages = estimatedAudienceSize * form.sendsPerLead;
+    const campaignDurationDays = form.endDate ?
+      Math.ceil((new Date(form.endDate).getTime() - new Date(form.startDate).getTime()) / (1000 * 60 * 60 * 24)) : 30;
+
+    posthog.capture('campaign_launched', {
+      campaign_name: form.name,
+      objective: form.objective,
+      agent_id: form.agentId,
+      audience_source: form.audienceSource,
+      segment_id: form.audienceSource === 'segment' ? form.segmentId : undefined,
+      channels: form.channels,
+      start_date: form.startDate,
+      end_date: form.endDate || undefined,
+      sends_per_lead: form.sendsPerLead,
+      sends_per_day: form.sendsPerDay,
+      max_retries: form.maxRetries,
+      auto_close_days: form.autoCloseDays,
+    });
+
+    posthog.capture('campaign_execution_plan', {
+      campaign_name: form.name,
+      objective: form.objective,
+      agent_name: AGENTS.find(a => a.id === form.agentId)?.name,
+      audience_size: estimatedAudienceSize,
+      segment_name: selectedSegment?.name,
+      channel_count: form.channels.length,
+      channels_selected: form.channels.join(','),
+      total_estimated_messages: estimatedMessages,
+      messages_per_day: form.sendsPerDay,
+      campaign_duration_days: campaignDurationDays,
+      retry_strategy: {
+        interval_hours: form.retryIntervalHours,
+        max_attempts: form.maxRetries + 1,
+      },
+      operational_window: {
+        days_of_week: form.weekdays.join(','),
+        start_time: form.startTime,
+        end_time: form.endTime,
+      },
+      success_metric: form.successCriteria || 'not_specified',
+      auto_close_threshold_days: form.autoCloseDays,
+    });
+
     setFeedback({ status: 'launched', name: form.name });
     setTimeout(() => setFeedback(null), 800);
   };
 
   const handleCancel = () => {
+    posthog.capture('campaign_cancelled', {
+      campaign_name: form.name,
+      objective: form.objective,
+    });
     setForm(initialForm);
   };
 
